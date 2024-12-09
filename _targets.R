@@ -150,7 +150,7 @@ max_settings <- list(
 
 # Replace the target list below with your own:
 list(
-  tar_target(i, seq(1:200)),
+  tar_target(i, seq(1:2000)),
   tar_target(setting, simulation_settings),
   tar_target(setting_lb, bounds_settings),
   tar_target(setting_max, max_settings),
@@ -186,7 +186,7 @@ list(
   tar_target(max_summary,
              data.table(simulation_max)[, .(cover_boot = mean(cover_boot),
                                             cover_xact = mean(cover_xact),
-                                            true_psi = true_psi[1], by = .(n, d, theta = paste(theta, collapse = ", ")))]
+                                            true_psi = true_psi[1], by = .(n, d, theta))]
   ),
   tar_target(finish,
              send_mail(bc_summary, lb_summary, max_summary)
