@@ -1,1 +1,0 @@
-/opt/software/R/4.2.1/lib64/R/bin/BATCH: line 60: 1900251 Terminated              ${R_HOME}/bin/R -f ${in} ${opts} ${R_BATCH_OPTIONS} > ${out} 2>&1
