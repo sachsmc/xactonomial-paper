@@ -6,3 +6,8 @@
 .quarto
 nohub.out
 run.Rout
+example/*.csv
+example/*.pdf
+example/exercise-example.R
+example/two-sample-binom.R
+_targets

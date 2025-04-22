@@ -54,7 +54,7 @@ psi_max <- function(theta, d) {
 
 }
 
-run_one <- function(i, n, d, theta, psi, limits, maxit = 100, csize = 100) {
+run_one <- function(i, n, d, theta, psi, limits, maxit = 100, csize = 100, psi_max = FALSE, ...) {
 
   true_psi <- psi(theta, d)
   data <- sample_data(rep(n, d), d, theta)
@@ -73,12 +73,33 @@ run_one <- function(i, n, d, theta, psi, limits, maxit = 100, csize = 100) {
   psi2 <- function(theta) {
     psi(theta, d = d)
   }
-  xacto <- xactonomial(psi2, data, alpha = .05, psi_limits = limits, maxit = maxit, chunksize = csize)
+  if(psi_max) {
+
+
+    p.ll <- xactonomial(data, psi2, psi_limits = limits, maxit = maxit, chunksize = csize,
+                psi0 = 1 / length(theta), conf_int = FALSE,
+                theta_null_points = t(rep(1 / length(theta), length(theta))))$p.value
+
+    xacto <- xactonomial(data, psi2, psi_limits = limits, maxit = maxit, chunksize = csize,
+                         psi0 = true_psi, itp_eps = .01, p_target = 0.05,
+                         p_value_limits = c(p.ll, 1e-8),
+                         theta_null_points = t(rep(1 / length(theta), length(theta))))
+
+
+  } else {
+
+    xacto <- xactonomial(data, psi2, psi_limits = limits, maxit = maxit, chunksize = csize,
+                         psi0 = true_psi, itp_eps = .01, p_target = 0.05,
+                         ...)
+
+  }
+
 
   data.frame(cover_boot = true_psi >= cib[1] & true_psi <= cib[2],
              width_boot = cib[2] - cib[1],
              cover_xact = true_psi >= xacto$conf.int[1] & true_psi <= xacto$conf.int[2],
              width_xact = xacto$conf.int[2] - xacto$conf.int[1],
+             p_xact = xacto$p.value,
              i = i, n = n, d = d, theta = paste(theta, collapse = ", "),
              true_psi = true_psi)
 
