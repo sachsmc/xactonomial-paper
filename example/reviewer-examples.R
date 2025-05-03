@@ -17,17 +17,53 @@ psi_max <- function(pp) {
 
 }
 
+
+data <- list(c(18, 23, 12, 15))
+
+
+xactonomial(data, psi_max, psi_limits = c(1 / 4, 1), psi0 = 1/ 4,
+            alternative = "greater", conf_int = FALSE)
+
+
+xactonomial(data, psi_max, psi_limits = c(1 / 4, 1), psi0 = 1/ 4,
+            theta_null_points = t(c(1 / 4, 1 / 4, 1 / 4, 1 / 4)),
+            alternative = "greater",
+            conf_int = TRUE)
+
 pees <- cover <- rep(NA, 1000)
 for(i in 1:length(pees)) {
   data <- sample_data2(65)
   runs <- xactonomial(data, psi_max, psi_limits = c(1 / 4, 1), psi0 = 1/ 4,
                       theta_null_points = t(c(1 / 4, 1 / 4, 1 / 4, 1 / 4)),
-                      alternative = "two.sided",
+                      alternative = "greater",
                          p_target = .3, conf_int = FALSE)
   pees[i] <- runs$p.value
 
 }
 mean(pees < .05)
+
+
+
+typeI_error_epsilon <- function(eps) {
+  sample_data2eps <- function(n) {
+
+    list(rmultinom(1, n, prob = rep(1/4, 4) + c(eps, 0, 0, -eps))[, 1])
+
+  }
+  pees <- rep(NA, 1000)
+  for(i in 1:length(pees)) {
+    data <- sample_data2eps(65)
+    runs <- xactonomial(data, psi_max, psi_limits = c(1 / 4, 1), psi0 = 1/ 4 + eps,
+                        alternative = "greater", maxit = 250,
+                        p_target = .3, conf_int = FALSE)
+    pees[i] <- runs$p.value
+
+  }
+  mean(pees < .05)
+}
+typeI_error_epsilon(.01)
+typeI_error_epsilon(.005)
+
 
 statistic_max <- function(df) {
 
@@ -148,3 +184,36 @@ ggsave("../method-compare.png", width = 5.75, height = 4.25)
 k <- 5
 n <- 200
 choose(k + n - 1, k - 1) / system.time(sspace_multinom(k, n))[3]
+
+
+## another example with null space of measure 0
+
+psi_v<-function(theta){
+  # inputs a matrix with each row a theta vector
+
+  rowfunc<-function(theta_row){
+    max(abs(theta_row[1:3] -theta_row[4:6]))
+  }
+
+  apply(theta,1,rowfunc)
+}
+
+data <- list(T1 = c(0, 2, 8), T2 = c(0, 2, 10))
+
+
+xactonomial(data, psi_v, psi_limits = c(0,1), conf_int = FALSE,
+            psi0 =0, alternative="greater", ga = FALSE)
+
+
+theta_sampler_eq_k2<-function(dk,nsamp){
+  theta1<- runif_dk_vects(dk[1],nsamp)
+  cbind(theta1,theta1)
+}
+
+xactonomial(data, psi_v, psi_limits = c(0,1), conf_int = FALSE, psi0 =0,
+            alternative="greater",
+            ga = FALSE,
+            theta_sampler=theta_sampler_eq_k2)
+
+
+
