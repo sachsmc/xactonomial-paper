@@ -1,6 +1,8 @@
 library(xactonomial)
 
-## comment 1, regularized max
+library(exact2x2)
+
+## comment 1,  max type 1 error on the boundary
 
 
 sample_data2 <- function(n) {
@@ -30,8 +32,12 @@ xactonomial(data, psi_max, psi_limits = c(1 / 4, 1), psi0 = 1/ 4,
             alternative = "greater",
             conf_int = TRUE)
 
-pees <- cover <- rep(NA, 1000)
-for(i in 1:length(pees)) {
+
+##
+
+
+pees <- cover <- rep(NA_real_, 1000)
+for(i in seq_along(pees)) {
   data <- sample_data2(65)
   runs <- xactonomial(data, psi_max, psi_limits = c(1 / 4, 1), psi0 = 1/ 4,
                       theta_null_points = t(c(1 / 4, 1 / 4, 1 / 4, 1 / 4)),
@@ -50,8 +56,8 @@ typeI_error_epsilon <- function(eps) {
     list(rmultinom(1, n, prob = rep(1/4, 4) + c(eps, 0, 0, -eps))[, 1])
 
   }
-  pees <- rep(NA, 1000)
-  for(i in 1:length(pees)) {
+  pees <- rep(NA_real_, 1000)
+  for(i in seq_along(pees)) {
     data <- sample_data2eps(65)
     runs <- xactonomial(data, psi_max, psi_limits = c(1 / 4, 1), psi0 = 1/ 4 + eps,
                         alternative = "greater", maxit = 250,
@@ -85,6 +91,72 @@ xactonomial(data, psi_max, psi_limits = c(1 / 3, 1), psi0 = 1 / 2,
             statistic = statistic_max)
 
 xactonomial(data, psi_max, psi_limits = c(1 / 3, 1), psi0 = 1 / 3, conf_int = TRUE)
+
+
+## another statistic example, the wald pooled vs difference
+
+data <- list(c(6, 4), c(3, 7))
+
+psi_rd <- function(theta) {
+
+  theta[1] - theta[3]
+
+}
+
+M1 <- matrix(sspace_multinom(2, 10), ncol = 2, byrow = TRUE)
+sspace <- combinate(M1, M1)
+
+stat_wald <- function(rr) {
+
+  if(is.matrix(rr)) {
+
+    s1 <- (rr[,1] / rowSums(rr[,1:2])) * (1 - rr[,1] / rowSums(rr[,1:2]))
+    s2 <- (rr[,3] / rowSums(rr[,3:4])) * (1 - rr[,3] / rowSums(rr[,3:4]))
+
+    difff <- (rr[,1] / rowSums(rr[,1:2])) - (rr[,3] / rowSums(rr[,3:4]))
+
+    ifelse(s1 + s2 == 0 & difff <= 0, -3.1,
+           ifelse(s1 + s2 == 0 & difff > 0, 3.1, difff / sqrt(s1 + s2)))
+
+
+  } else {
+
+    s1 <- (rr[1] / sum(rr[1:2])) * (1 - rr[1] / sum(rr[1:2]))
+    s2 <- (rr[3] / sum(rr[3:4])) * (1 - rr[3] / sum(rr[3:4]))
+
+    difff <- (rr[1] / sum(rr[1:2])) - (rr[3] / sum(rr[3:4]))
+    difff / sqrt(s1 + s2)
+  }
+
+}
+
+stat <- stat_wald(sspace$Sspace)
+fyn <- apply(sspace$Sspace, 1, \(r) psi_rd(c(r[1:2] / sum(r[1:2]),
+                                             r[3:4] / sum(r[3:4]))))
+plot(fyn ~ stat)
+abline(v = .45)
+abline(h = .3)
+
+set.seed(123)
+xactonomial(data, psi_rd, psi_limits = c(-1, 1), psi0 = 0,
+            conf_int = FALSE)
+
+
+set.seed(123)
+xactonomial(data, psi_rd, statistic = stat_wald,
+            psi_limits = c(-1, 1), psi0 = 0,
+            conf_int = FALSE)
+
+uncondExact2x2(data[[2]][1], sum(data[[1]]),
+               data[[1]][1], sum(data[[1]]),
+               parmtype = "difference", method = "wald-pooled")
+
+
+uncondExact2x2(data[[2]][1], sum(data[[1]]),
+               data[[1]][1], sum(data[[1]]),
+               parmtype = "difference", method = "simple")
+
+
 
 ## other point about multiple roots
 ## two sample binomial
@@ -171,8 +243,10 @@ pdat <- rbind(data.frame(iteration = seq_along(uniform$p.sequence$p.null),
                  p.value = ascent$p.sequence$p.null, method = "gradient ascent"))
 pdat$method <- factor(pdat$method, levels = c("uniform", "posterior", "gradient ascent", "combination"))
 ggplot(pdat,
-      aes(x = iteration * 10, y = p.value, color = method)) + geom_step() + scale_x_log10() + theme_bw() +
+      aes(x = iteration * 10, y = p.value, color = method, linetype = method)) +
+  geom_step(linewidth = 1) + scale_x_log10() + theme_bw() +
   theme(legend.position = "bottom") + xlab("iteration")+
+  scale_linetype_manual(values = c("solid", "dotted", "dashed", "dotdash")) +
   geom_hline(yintercept = .1) + scale_color_brewer(type = "qual", palette = "Dark2")
 
 ggsave("../method-compare.png", width = 5.75, height = 4.25)
